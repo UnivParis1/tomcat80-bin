@@ -104,7 +104,13 @@ fi
 test ".$CATALINA_HOME" = . && CATALINA_HOME=`cd "$DIRNAME/.." >/dev/null; pwd`
 test ".$CATALINA_BASE" = . && CATALINA_BASE="$CATALINA_HOME"
 test ".$CATALINA_MAIN" = . && CATALINA_MAIN=org.apache.catalina.startup.Bootstrap
-test ".$JSVC" = . && JSVC="$CATALINA_BASE/bin/jsvc"
+# If not explicitly set, look for jsvc in CATALINA_BASE first then CATALINA_HOME
+if [ -z "$JSVC" ]; then
+    JSVC="$CATALINA_BASE/bin/jsvc"
+    if [ ! -x "$JSVC" ]; then
+        JSVC="$CATALINA_HOME/bin/jsvc"
+    fi
+fi
 # Set the default service-start wait time if necessary
 test ".$SERVICE_START_WAIT_TIME" = . && SERVICE_START_WAIT_TIME=10
 
@@ -119,17 +125,19 @@ elif [ -r "$CATALINA_HOME/bin/setenv.sh" ]; then
 fi
 
 # Add on extra jar files to CLASSPATH
-# tomcat-juli.jar can be over-ridden per instance
 test ".$CLASSPATH" != . && CLASSPATH="${CLASSPATH}:"
-if [ "$CATALINA_BASE" != "$CATALINA_HOME" ] && [ -r "$CATALINA_BASE/bin/tomcat-juli.jar" ] ; then
-  CLASSPATH="$CLASSPATH$CATALINA_BASE/bin/tomcat-juli.jar:$CATALINA_HOME/bin/commons-daemon.jar:$CATALINA_HOME/bin/bootstrap.jar"
-else
-  CLASSPATH="$CLASSPATH$CATALINA_HOME/bin/commons-daemon.jar:$CATALINA_HOME/bin/bootstrap.jar"
-fi
+CLASSPATH="$CLASSPATH$CATALINA_HOME/bin/bootstrap.jar:$CATALINA_HOME/bin/commons-daemon.jar"
 
 test ".$CATALINA_OUT" = . && CATALINA_OUT="$CATALINA_BASE/logs/catalina-daemon.out"
 test ".$CATALINA_TMP" = . && CATALINA_TMP="$CATALINA_BASE/temp"
 
+# Add tomcat-juli.jar to classpath
+# tomcat-juli.jar can be over-ridden per instance
+if [ -r "$CATALINA_BASE/bin/tomcat-juli.jar" ] ; then
+  CLASSPATH="$CLASSPATH:$CATALINA_BASE/bin/tomcat-juli.jar"
+else
+  CLASSPATH="$CLASSPATH:$CATALINA_HOME/bin/tomcat-juli.jar"
+fi
 # Set juli LogManager config file if it is present and an override has not been issued
 if [ -z "$LOGGING_CONFIG" ]; then
   if [ -r "$CATALINA_BASE/conf/logging.properties" ]; then
